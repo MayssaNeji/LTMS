@@ -1,75 +1,79 @@
 ﻿using LTMS.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using System.Threading.Tasks;
 
 namespace LTMS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
-
     {
-        public static CompteHash User = new CompteHash();
+        private readonly LtmsContext _dbContext;
+        private readonly IConfiguration _configuration;
 
-
-        
-        public IConfiguration Configuration { get; }
-
-        public AuthController(IConfiguration configuration)
+        public AuthController(LtmsContext  dbContext, IConfiguration configuration)
         {
-            Configuration = configuration;
+            _dbContext = dbContext;
+            _configuration = configuration;
         }
-
-
 
         // POST: api/<AuthController>
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register(Compte request)
-        {
-            CreatePasswordHash(request.Password, out byte[] PasswordHash, out byte[] PasswordSalt);
+        {    await _dbContext.Comptes.AddAsync(request);
+            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-            User.Login = request.Login;
-            User.PasswordHash = PasswordHash;
-            User.PasswordSalt = PasswordSalt;
+            var compte = new CompteHash
+            {
+                Login = request.Login,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt
+            };
 
+            await _dbContext.CompteHashes.AddAsync(compte);
+            await _dbContext.SaveChangesAsync();
 
-           
-
-
-
-            return Ok(User);
-
+            return Ok(compte);
         }
-        [HttpPost("Login")]
+
+        [HttpPost("login")]
         public async Task<ActionResult<User>> Login(Compte request)
         {
-            if (User.Login != request.Login)
+            var login = new Compte { Login = request.Login };
+            var compte = await _dbContext.CompteHashes.FirstOrDefaultAsync(c => c.Login == login.Login);
+
+            if (compte == null)
             {
                 return BadRequest("User not found");
             }
-            if (!verifyPasswordHash(request.Password, User.PasswordHash, User.PasswordSalt))
-            {
 
-                return BadRequest("wrong password");
+            if (VerifyPasswordHash(request.Password, compte.PasswordHash, compte.PasswordSalt))
+            {
+                return BadRequest("Wrong password");
             }
-            string token = createToken(User);
+
+            var token = CreateToken(compte);
             return Ok(token);
         }
 
-        private string createToken(CompteHash user)
+        private string CreateToken(CompteHash compte)
         {
-            List<Claim> claims = new List<Claim>
+            var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name,user.Login)
+                new Claim(ClaimTypes.Name, compte.Login)
             };
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(
-                Configuration.GetSection("AppSettings:Token").Value));
+
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
             var token = new JwtSecurityToken(
                 claims: claims,
@@ -80,25 +84,23 @@ namespace LTMS.Controllers
             return jwt;
         }
 
-        private void CreatePasswordHash(string password, out byte[] PasswordHash, out byte[] PasswordSalt)
+        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512())
             {
-                PasswordSalt = hmac.Key;
-                PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
             }
         }
 
 
-        private bool verifyPasswordHash(string password, byte[] PasswordHash, byte[] PasswordSalt)
 
+        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
-            using (var hmac = new HMACSHA512(User.PasswordSalt))
+            using (var hmac = new HMACSHA512(passwordSalt))
             {
-
                 var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(PasswordHash);
-
+                return computedHash.SequenceEqual(passwordHash);
             }
         }
 

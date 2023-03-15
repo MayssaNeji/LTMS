@@ -29,10 +29,11 @@ public partial class LtmsContext : DbContext
     {
         modelBuilder.Entity<Compte>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("Compte");
+            entity.HasKey(e => e.Id).HasName("PK__Compte__3214EC2745C4BCE7");
 
+            entity.ToTable("Compte");
+
+            entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Login)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -43,10 +44,11 @@ public partial class LtmsContext : DbContext
 
         modelBuilder.Entity<CompteHash>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("CompteHash");
+            entity.HasKey(e => e.Id).HasName("PK__CompteHa__3214EC27AB67A77D");
 
+            entity.ToTable("CompteHash");
+
+            entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Login)
                 .HasMaxLength(50)
                 .IsUnicode(false);

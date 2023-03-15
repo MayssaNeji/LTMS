@@ -3734,11 +3734,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\mayssa\\source\\repos\\PFE\\.net\\LTMS\\LTMS.csproj",
+      "projectUniqueName": "C:\\Users\\mayssa\\Source\\Repos\\MayssaNeji\\LTMS\\LTMS.csproj",
       "projectName": "LTMS",
-      "projectPath": "C:\\Users\\mayssa\\source\\repos\\PFE\\.net\\LTMS\\LTMS.csproj",
+      "projectPath": "C:\\Users\\mayssa\\Source\\Repos\\MayssaNeji\\LTMS\\LTMS.csproj",
       "packagesPath": "C:\\Users\\mayssa\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\mayssa\\source\\repos\\PFE\\.net\\LTMS\\obj\\",
+      "outputPath": "C:\\Users\\mayssa\\Source\\Repos\\MayssaNeji\\LTMS\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\mayssa\\AppData\\Roaming\\NuGet\\NuGet.Config",

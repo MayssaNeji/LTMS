@@ -10,4 +10,6 @@ public partial class CompteHash
     public byte[] PasswordHash { get; set; } = null!;
 
     public byte[] PasswordSalt { get; set; } = null!;
+
+    public int Id { get; set; }
 }

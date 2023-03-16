@@ -21,23 +21,32 @@ namespace LTMS.Controllers
         private readonly LtmsContext _dbContext;
         private readonly IConfiguration _configuration;
 
-        public AuthController(LtmsContext  dbContext, IConfiguration configuration)
+        public AuthController(LtmsContext dbContext, IConfiguration configuration)
         {
             _dbContext = dbContext;
             _configuration = configuration;
         }
 
         // POST: api/<AuthController>
+        // POST: api/<AuthController>
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register(Compte request)
-        {    await _dbContext.Comptes.AddAsync(request);
+        {
+            var existingUser = await _dbContext.Comptes.FirstOrDefaultAsync(c => c.Login == request.Login);
+
+            if (existingUser != null)
+            {
+                return BadRequest("User already exists");
+            }
+
+            await _dbContext.Comptes.AddAsync(request);
             CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
             var compte = new CompteHash
             {
                 Login = request.Login,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt
+                PasswordHash = passwordHash.ToArray(),
+                PasswordSalt = passwordSalt.ToArray()
             };
 
             await _dbContext.CompteHashes.AddAsync(compte);
@@ -57,20 +66,26 @@ namespace LTMS.Controllers
                 return BadRequest("User not found");
             }
 
-            if (VerifyPasswordHash(request.Password, compte.PasswordHash, compte.PasswordSalt))
+            if (!VerifyPasswordHash(request.Password, compte.PasswordHash, compte.PasswordSalt))
             {
-                return BadRequest("Wrong password");
+                return BadRequest("Wrong Password");
             }
 
+
             var token = CreateToken(compte);
-            return Ok(token);
+            return Ok(new { message = "Login successful",token });
         }
+
+
+
+
 
         private string CreateToken(CompteHash compte)
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, compte.Login)
+                new Claim(ClaimTypes.Name, compte.Login),
+                new Claim(ClaimTypes.NameIdentifier, compte.Id.ToString())
             };
 
             var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
@@ -93,8 +108,6 @@ namespace LTMS.Controllers
             }
         }
 
-
-
         private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512(passwordSalt))
@@ -103,6 +116,5 @@ namespace LTMS.Controllers
                 return computedHash.SequenceEqual(passwordHash);
             }
         }
-
     }
 }

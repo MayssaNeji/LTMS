@@ -52,12 +52,6 @@ public partial class LtmsContext : DbContext
             entity.Property(e => e.Login)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-            entity.Property(e => e.PasswordHash)
-                .HasMaxLength(1000)
-                .IsFixedLength();
-            entity.Property(e => e.PasswordSalt)
-                .HasMaxLength(1000)
-                .IsFixedLength();
         });
 
         modelBuilder.Entity<User>(entity =>

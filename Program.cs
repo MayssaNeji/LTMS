@@ -1,6 +1,7 @@
-using LTMS.Models;
+﻿using LTMS.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using LTMS.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(options => options.AddPolicy(name: "NgOrigins",
@@ -33,6 +34,8 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+
 
 app.Run();
 

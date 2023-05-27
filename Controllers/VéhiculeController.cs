@@ -6,40 +6,41 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LTMS.Models;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 
 namespace LTMS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class VéhiculeController : ControllerBase
+    public class VehiculeController : ControllerBase
     {
         private readonly LtmsContext _context;
 
-        public VéhiculeController(LtmsContext context)
+        public VehiculeController(LtmsContext context)
         {
             _context = context;
         }
 
         // GET: api/Véhicule
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Véhicule>>> GetVéhicules()
+        [HttpGet("GetAllVehicules")]
+        public async Task<ActionResult<IEnumerable<Vehicule>>> GetAllVéhicules()
         {
-          if (_context.Véhicules == null)
+          if (_context.Vehicules == null)
           {
               return NotFound();
           }
-            return await _context.Véhicules.ToListAsync();
+            return await _context.Vehicules.ToListAsync();
         }
 
         // GET: api/Véhicule/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Véhicule>> GetVéhicule(int id)
+        [HttpGet("GetVehicule")]
+        public async Task<ActionResult<Vehicule>> GetVéhicule(int id)
         {
-          if (_context.Véhicules == null)
+          if (_context.Vehicules == null)
           {
               return NotFound();
           }
-            var véhicule = await _context.Véhicules.FindAsync(id);
+            var véhicule = await _context.Vehicules.FindAsync(id);
 
             if (véhicule == null)
             {
@@ -51,8 +52,8 @@ namespace LTMS.Controllers
 
         // PUT: api/Véhicule/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutVéhicule(int id, Véhicule véhicule)
+        [HttpPut("PutVehicule")]
+        public async Task<IActionResult> PutVehicule(int id, Vehicule véhicule)
         {
             if (id != véhicule.Id)
             {
@@ -82,34 +83,44 @@ namespace LTMS.Controllers
 
         // POST: api/Véhicule
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Véhicule>> PostVéhicule(Véhicule véhicule)
+        [HttpPost("PostVehicule")]
+       
+        public async Task<ActionResult<Vehicule>> PostVehicule(Vehicule vehicule)
         {
-          if (_context.Véhicules == null)
-          {
-              return Problem("Entity set 'LtmsContext.Véhicules'  is null.");
-          }
-            _context.Véhicules.Add(véhicule);
+            if (string.IsNullOrEmpty(vehicule.Agence))
+            {
+                return BadRequest("vehicule property is required.");
+            }
+
+
+            var agence = await _context.Agences.FirstOrDefaultAsync(a => a.Nom == vehicule.Agence);
+            if (agence == null)
+            {
+                return BadRequest("vehicule not found.");
+            }
+
+            vehicule.AgenceNavigation = agence;
+            _context.Vehicules.Add(vehicule);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetVéhicule", new { id = véhicule.Id }, véhicule);
+            return CreatedAtAction("GetVehicule", new { id = vehicule.Id }, vehicule);
         }
 
         // DELETE: api/Véhicule/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteVéhicule(int id)
+        [HttpDelete("DeleteVehicule")]
+        public async Task<IActionResult> DeleteVehicule(int id)
         {
-            if (_context.Véhicules == null)
+            if (_context.Vehicules == null)
             {
                 return NotFound();
             }
-            var véhicule = await _context.Véhicules.FindAsync(id);
+            var véhicule = await _context.Vehicules.FindAsync(id);
             if (véhicule == null)
             {
                 return NotFound();
             }
 
-            _context.Véhicules.Remove(véhicule);
+            _context.Vehicules.Remove(véhicule);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -117,7 +128,9 @@ namespace LTMS.Controllers
 
         private bool VéhiculeExists(int id)
         {
-            return (_context.Véhicules?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Vehicules?.Any(e => e.Id == id)).GetValueOrDefault();
         }
+
+       
     }
 }

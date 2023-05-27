@@ -17,17 +17,25 @@ public partial class LtmsContext : DbContext
 
     public virtual DbSet<Agence> Agences { get; set; }
 
+    public virtual DbSet<Audit> Audits { get; set; }
+
     public virtual DbSet<Chauffeur> Chauffeurs { get; set; }
 
     public virtual DbSet<Circuit> Circuits { get; set; }
 
     public virtual DbSet<Compte> Comptes { get; set; }
 
-    public virtual DbSet<CompteHash> CompteHashes { get; set; }
+    public virtual DbSet<Employe> Employes { get; set; }
+
+    public virtual DbSet<HistoriqueImport> HistoriqueImports { get; set; }
 
     public virtual DbSet<Segment> Segments { get; set; }
 
-    public virtual DbSet<Véhicule> Véhicules { get; set; }
+    public virtual DbSet<Shift> Shifts { get; set; }
+
+    public virtual DbSet<Station> Stations { get; set; }
+
+    public virtual DbSet<Vehicule> Vehicules { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
@@ -54,9 +62,48 @@ public partial class LtmsContext : DbContext
                 .HasColumnName("site_internet");
         });
 
+        modelBuilder.Entity<Audit>(entity =>
+        {
+            entity.ToTable("audit");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever()
+                .HasColumnName("id");
+            entity.Property(e => e.Assurance).HasColumnName("assurance");
+            entity.Property(e => e.Bus)
+                .HasMaxLength(100)
+                .IsFixedLength()
+                .HasColumnName("bus");
+            entity.Property(e => e.CarteProfessionelle).HasColumnName("carteProfessionelle");
+            entity.Property(e => e.Chaises).HasColumnName("chaises");
+            entity.Property(e => e.Comportements).HasColumnName("comportements");
+            entity.Property(e => e.DateAudit)
+                .HasColumnType("datetime")
+                .HasColumnName("dateAudit");
+            entity.Property(e => e.Feux).HasColumnName("feux");
+            entity.Property(e => e.Maintenance).HasColumnName("maintenance");
+            entity.Property(e => e.NomAuditeur)
+                .HasMaxLength(10)
+                .IsFixedLength()
+                .HasColumnName("nomAuditeur");
+            entity.Property(e => e.PersonneAuditee)
+                .HasMaxLength(100)
+                .IsFixedLength()
+                .HasColumnName("personneAuditee");
+            entity.Property(e => e.Pneux).HasColumnName("pneux");
+            entity.Property(e => e.Vitres).HasColumnName("vitres");
+
+            entity.HasOne(d => d.PersonneAuditeeNavigation).WithMany(p => p.Audits)
+                .HasPrincipalKey(p => p.Nom)
+                .HasForeignKey(d => d.PersonneAuditee)
+                .HasConstraintName("FK_audit_Chauffeurs");
+        });
+
         modelBuilder.Entity<Chauffeur>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Chauffeu__3214EC27A2F25F26");
+
+            entity.HasIndex(e => e.Nom, "UQ_Chauffeurs_Nom").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Agence)
@@ -80,25 +127,29 @@ public partial class LtmsContext : DbContext
 
         modelBuilder.Entity<Circuit>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__circuit__3214EC27F6D5A8A3");
+            entity.HasKey(e => e.RefSapLeoni).HasName("PK_Circuit");
 
             entity.ToTable("circuit");
 
-            entity.Property(e => e.Id).HasColumnName("ID");
+            entity.HasIndex(e => e.RefSapLeoni, "UQ_circuit_REF_SAP_LEONI").IsUnique();
+
+            entity.Property(e => e.RefSapLeoni)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("REF_SAP_LEONI");
             entity.Property(e => e.Agence)
                 .HasMaxLength(100)
                 .IsFixedLength();
-            entity.Property(e => e.ContributionEmployé).HasColumnName("contribution_employé");
+            entity.Property(e => e.ContributionEmploye).HasColumnName("contribution_employe");
             entity.Property(e => e.CoutKm).HasColumnName("Cout_Km");
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("ID");
             entity.Property(e => e.NbKm).HasColumnName("Nb_Km");
-            entity.Property(e => e.PointArrivée)
+            entity.Property(e => e.PointArrivee)
                 .HasMaxLength(100)
                 .IsFixedLength()
-                .HasColumnName("point_arrivée");
-            entity.Property(e => e.RefSapLeoni)
-                .HasMaxLength(100)
-                .IsFixedLength()
-                .HasColumnName("REF_SAP_LEONI");
+                .HasColumnName("point_arrivee");
 
             entity.HasOne(d => d.AgenceNavigation).WithMany(p => p.Circuits)
                 .HasForeignKey(d => d.Agence)
@@ -112,22 +163,86 @@ public partial class LtmsContext : DbContext
             entity.ToTable("Compte");
 
             entity.Property(e => e.Id).HasColumnName("ID");
+            entity.Property(e => e.DateDeNaissance)
+                .HasColumnType("date")
+                .HasColumnName("date_de_naissance");
             entity.Property(e => e.Login)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-            entity.Property(e => e.Password)
+            entity.Property(e => e.Matricule).HasColumnName("matricule");
+            entity.Property(e => e.Nom)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.Prenom)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Role).HasMaxLength(255);
         });
 
-        modelBuilder.Entity<CompteHash>(entity =>
+        modelBuilder.Entity<Employe>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__CompteHa__3214EC27AB67A77D");
+            entity.HasKey(e => e.Matricule);
 
-            entity.ToTable("CompteHash");
+            entity.ToTable("employes");
 
-            entity.Property(e => e.Id).HasColumnName("ID");
-            entity.Property(e => e.Login)
+            entity.Property(e => e.Matricule).ValueGeneratedNever();
+            entity.Property(e => e.CentreDeCout)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ContreMaitre)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("contreMaitre");
+            entity.Property(e => e.Nom)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.NomDuGroupe)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Prenom)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Ps)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("PS");
+            entity.Property(e => e.Segment)
+                .HasMaxLength(100)
+                .IsFixedLength()
+                .HasColumnName("segment");
+            entity.Property(e => e.Shift)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("shift");
+            entity.Property(e => e.Station)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("station");
+
+            entity.HasOne(d => d.SegmentNavigation).WithMany(p => p.Employes)
+                .HasPrincipalKey(p => p.Nom)
+                .HasForeignKey(d => d.Segment)
+                .HasConstraintName("FK_employes_segment");
+
+            entity.HasOne(d => d.ShiftNavigation).WithMany(p => p.Employes)
+                .HasForeignKey(d => d.Shift)
+                .HasConstraintName("FK_employes_shift");
+
+            entity.HasOne(d => d.StationNavigation).WithMany(p => p.Employes)
+                .HasPrincipalKey(p => p.RefSapLeoni)
+                .HasForeignKey(d => d.Station)
+                .HasConstraintName("FK_employes_station");
+        });
+
+        modelBuilder.Entity<HistoriqueImport>(entity =>
+        {
+            entity.ToTable("HistoriqueImport");
+
+            entity.Property(e => e.Creater)
+                .HasMaxLength(10)
+                .IsFixedLength();
+            entity.Property(e => e.DateImport).HasColumnType("datetime");
+            entity.Property(e => e.NomFichier)
                 .HasMaxLength(50)
                 .IsUnicode(false);
         });
@@ -137,6 +252,8 @@ public partial class LtmsContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Segment__3214EC274B8BC47C");
 
             entity.ToTable("Segment");
+
+            entity.HasIndex(e => e.Nom, "UQ_segment_Nom").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.CentreDeCout)
@@ -160,11 +277,52 @@ public partial class LtmsContext : DbContext
                 .HasColumnName("RH_Segment");
         });
 
-        modelBuilder.Entity<Véhicule>(entity =>
+        modelBuilder.Entity<Shift>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Véhicule__3214EC279BC95546");
+            entity.HasKey(e => e.ReferenceShift);
 
-            entity.ToTable("Véhicule");
+            entity.ToTable("shift");
+
+            entity.Property(e => e.ReferenceShift)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.HeureDebutShift)
+                .HasMaxLength(5)
+                .IsUnicode(false)
+                .HasColumnName("heureDebutShift");
+            entity.Property(e => e.HeureFinShift)
+                .HasMaxLength(5)
+                .IsUnicode(false)
+                .HasColumnName("heureFinShift");
+        });
+
+        modelBuilder.Entity<Station>(entity =>
+        {
+            entity.ToTable("Station");
+
+            entity.HasIndex(e => e.RefSapLeoni, "UQ_station[ref.SAP LEONI").IsUnique();
+
+            entity.Property(e => e.Id).HasColumnName("ID");
+            entity.Property(e => e.RefSapLeoni)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("ref.SAP LEONI");
+            entity.Property(e => e.ReferenceRegion)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("Reference Region");
+
+            entity.HasOne(d => d.RefSapLeoniNavigation).WithOne(p => p.Station)
+                .HasForeignKey<Station>(d => d.RefSapLeoni)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_circuit_Station");
+        });
+
+        modelBuilder.Entity<Vehicule>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Vehicule__3214EC27A34BDA8F");
+
+            entity.ToTable("Vehicule");
 
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Agence)
@@ -181,10 +339,10 @@ public partial class LtmsContext : DbContext
                 .HasMaxLength(100)
                 .IsFixedLength();
 
-            entity.HasOne(d => d.AgenceNavigation).WithMany(p => p.Véhicules)
+            entity.HasOne(d => d.AgenceNavigation).WithMany(p => p.Vehicules)
                 .HasForeignKey(d => d.Agence)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Véhicule_Agence");
+                .HasConstraintName("FK_Vehicule_Agence");
         });
 
         OnModelCreatingPartial(modelBuilder);

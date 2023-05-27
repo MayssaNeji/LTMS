@@ -1,24 +1,20 @@
 ﻿using LTMS.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using SendGrid.Helpers.Mail;
-using SendGrid;
+using MimeKit;
+using MailKit.Net.Smtp;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Net;
-
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using MailKit.Net.Smtp;
 using MailKit.Security;
-using MimeKit;
+using Microsoft.AspNetCore.Identity;
 using MimeKit.Text;
 
 namespace LTMS.Controllers
@@ -36,10 +32,8 @@ namespace LTMS.Controllers
             _configuration = configuration;
         }
 
-        // POST: api/<AuthController>
-        // POST: api/<AuthController>
         [HttpPost("register")]
-        public async Task<ActionResult<Compte>> Register(Compte request)
+        public async Task<ActionResult<Compte>> Register(Compte request,string Password)
         {
             var existingUser = await _dbContext.Comptes.FirstOrDefaultAsync(c => c.Login == request.Login);
 
@@ -48,56 +42,58 @@ namespace LTMS.Controllers
                 return BadRequest("User already exists");
             }
 
-            await _dbContext.Comptes.AddAsync(request);
-            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
+            CreatePasswordHash(Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-            var compte = new CompteHash
-            {
-                Login = request.Login,
-                PasswordHash = passwordHash.ToArray(),
-                PasswordSalt = passwordSalt.ToArray()
-            };
+            var compte = new Compte();
 
-            await _dbContext.CompteHashes.AddAsync(compte);
+            compte.Login= request.Login;
+            compte.Prenom= request.Prenom;
+            compte.DateDeNaissance= request.DateDeNaissance;
+            compte.Role= request.Role;
+            compte.Nom= request.Nom;
+            compte.Matricule= request.Matricule;
+            compte.Tel= request.Tel;
+         
+            compte.PasswordHash = passwordHash;
+            compte.PasswordSalt = passwordSalt;
+               
+
+            await _dbContext.Comptes.AddAsync(compte);
             await _dbContext.SaveChangesAsync();
 
             return Ok(compte);
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<Compte>> Login(Compte request)
+        public async Task<ActionResult<Compte>> Login(Compte request, string Password)
         {
             var login = new Compte { Login = request.Login };
-            var compte = await _dbContext.CompteHashes.FirstOrDefaultAsync(c => c.Login == login.Login);
+            var compte = await _dbContext.Comptes.FirstOrDefaultAsync(c => c.Login == login.Login);
 
             if (compte == null)
             {
                 return BadRequest("User not found");
             }
 
-            if (!VerifyPasswordHash(request.Password, compte.PasswordHash, compte.PasswordSalt))
+            if (!VerifyPasswordHash(Password, compte.PasswordHash, compte.PasswordSalt))
             {
                 return BadRequest("Wrong Password");
             }
 
-
             var token = CreateToken(compte);
-            return Ok(new { message = "Login successful",token });
+            return Ok(new { message = "Login successful", token, role = compte.Role });
         }
 
-
-
-
-
-        private string CreateToken(CompteHash compte)
+       
+        private string CreateToken(Compte compte)
         {
-            var claims = new List<Claim>
+            List<Claim> claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, compte.Login),
-                new Claim(ClaimTypes.NameIdentifier, compte.Id.ToString())
+                new Claim(ClaimTypes.Name, compte.Login)
+                // Add other claims as needed
             };
 
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
             var token = new JwtSecurityToken(
                 claims: claims,
@@ -108,12 +104,13 @@ namespace LTMS.Controllers
             return jwt;
         }
 
+
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512())
             {
                 passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
             }
         }
 
@@ -121,53 +118,10 @@ namespace LTMS.Controllers
         {
             using (var hmac = new HMACSHA512(passwordSalt))
             {
-                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
                 return computedHash.SequenceEqual(passwordHash);
             }
         }
-
-        [HttpPost("forgot-password")]
-        public async Task<ActionResult> ForgotPassword(string email)
-        {
-            var user = await _dbContext.Comptes.FirstOrDefaultAsync(c => c.Login == email);
-
-            if (user == null)
-            {
-                return BadRequest("User not found");
-            }
-
-            var newPassword = GenerateRandomPassword();
-            CreatePasswordHash(newPassword, out byte[] passwordHash, out byte[] passwordSalt);
-
-            var compteHash = await _dbContext.CompteHashes.FirstOrDefaultAsync(ch => ch.Login == user.Login);
-            if (compteHash == null)
-            {
-                compteHash = new CompteHash()
-                {
-                    Login = user.Login,
-                    PasswordHash = passwordHash,
-                    PasswordSalt = passwordSalt
-                };
-                await _dbContext.CompteHashes.AddAsync(compteHash);
-            }
-            else
-            {
-                compteHash.PasswordHash = passwordHash;
-                compteHash.PasswordSalt = passwordSalt;
-            }
-
-            await _dbContext.SaveChangesAsync();
-
-           SendEmail(user.Login, newPassword);
-
-            return Ok(new { message = "Password reset email sent" });
-        }
-
-
-
-
-
-
 
         private string GenerateRandomPassword(int length = 8)
         {
@@ -178,14 +132,51 @@ namespace LTMS.Controllers
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-
-
-
-
-
-
+        [Route("~/api/forgetpassword")]
         [HttpPost]
-        public void SendEmail(string mail, string newPassword)
+        public async Task<Object> ForgotPassword(MyObject email)
+        {
+
+
+            var user = await _dbContext.Comptes.FirstOrDefaultAsync(c => c.Login == email.email);
+
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            var newPassword = GenerateRandomPassword();
+            CreatePasswordHash(newPassword, out byte[] passwordHash, out byte[] passwordSalt);
+
+            var compteHash = await _dbContext.Comptes.FirstOrDefaultAsync(ch => ch.Login == user.Login);
+            if (compteHash == null)
+            {
+                compteHash = new Compte();
+
+
+                compteHash.PasswordHash = passwordHash;
+                compteHash.PasswordSalt = passwordSalt;
+
+                await _dbContext.Comptes.AddAsync(compteHash);
+            }
+            else
+            {
+                compteHash.PasswordHash = passwordHash;
+                compteHash.PasswordSalt = passwordSalt;
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            SendEmail(user.Login, newPassword);
+
+            // Return a success response
+            return Ok(new { message = "Password reset email sent" });
+        }
+
+
+
+
+        private void SendEmail(string mail, string newPassword)
         {
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse("mayssaneji6@gmail.com"));
@@ -194,8 +185,8 @@ namespace LTMS.Controllers
             email.Body = new TextPart(TextFormat.Html) { Text = "Your new password is: " + newPassword };
 
             using var smtp = new SmtpClient();
-            smtp.Connect("smtp.ethereal.email", 587, SecureSocketOptions.StartTls);
-            smtp.Authenticate("mayssaneji6@gmail.com", "sousou msk");
+            smtp.Connect("smtp-relay.sendinblue.com", 587, SecureSocketOptions.StartTls);
+            smtp.Authenticate("mayssaneji6@gmail.com", "n4aLdtYXPjvgWTD3");
             smtp.Send(email);
             smtp.Disconnect(true);
         }

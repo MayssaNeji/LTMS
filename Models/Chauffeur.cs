@@ -18,4 +18,6 @@ public partial class Chauffeur
     public int Id { get; set; }
 
     public virtual Agence AgenceNavigation { get; set; } = null!;
+
+    public virtual ICollection<Audit> Audits { get; } = new List<Audit>();
 }

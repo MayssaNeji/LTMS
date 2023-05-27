@@ -19,5 +19,5 @@ public partial class Agence
 
     public virtual ICollection<Circuit> Circuits { get; } = new List<Circuit>();
 
-    public virtual ICollection<Véhicule> Véhicules { get; } = new List<Véhicule>();
+    public virtual ICollection<Vehicule> Vehicules { get; } = new List<Vehicule>();
 }

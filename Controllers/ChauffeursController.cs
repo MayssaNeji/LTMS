@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LTMS.Models;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace LTMS.Controllers
 {
@@ -21,8 +23,8 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Chauffeurs
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Chauffeur>>> GetChauffeurs()
+        [HttpGet("GetAllChauffeurs")]
+        public async Task<ActionResult<IEnumerable<Chauffeur>>> GetAllChauffeurs()
         {
           if (_context.Chauffeurs == null)
           {
@@ -32,27 +34,26 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Chauffeurs/5
-        [HttpGet("{id}")]
+        [HttpGet("search")]
         public async Task<ActionResult<Chauffeur>> GetChauffeur(int id)
         {
-          if (_context.Chauffeurs == null)
-          {
-              return NotFound();
-          }
-            var chauffeur = await _context.Chauffeurs.FindAsync(id);
+            var chauffeur = await _context.Chauffeurs
+                .Include(c => c.AgenceNavigation)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (chauffeur == null)
             {
                 return NotFound();
             }
 
-            return chauffeur;
+            return Ok(chauffeur);
         }
+
 
         // PUT: api/Chauffeurs/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutChauffeur(int id, Chauffeur chauffeur)
+        [HttpPut("PutChauffeur")]
+        public async Task<IActionResult> PutChauffeur(int id,[FromBody] Chauffeur chauffeur)
         {
             if (id != chauffeur.Id)
             {
@@ -82,13 +83,22 @@ namespace LTMS.Controllers
 
         // POST: api/Chauffeurs
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost("PostChauffeur")]
         public async Task<ActionResult<Chauffeur>> PostChauffeur(Chauffeur chauffeur)
         {
-          if (_context.Chauffeurs == null)
-          {
-              return Problem("Entity set 'LtmsContext.Chauffeurs'  is null.");
-          }
+            if (string.IsNullOrEmpty(chauffeur.Agence))
+            {
+                return BadRequest("Chauffeur property is required.");
+            }
+
+         
+            var agence = await _context.Agences.FirstOrDefaultAsync(a => a.Nom == chauffeur.Agence);
+            if (agence == null)
+            {
+                return BadRequest("Chauffeur not found.");
+            }
+
+            chauffeur.AgenceNavigation = agence;
             _context.Chauffeurs.Add(chauffeur);
             await _context.SaveChangesAsync();
 
@@ -119,5 +129,7 @@ namespace LTMS.Controllers
         {
             return (_context.Chauffeurs?.Any(e => e.Id == id)).GetValueOrDefault();
         }
+
+
     }
 }

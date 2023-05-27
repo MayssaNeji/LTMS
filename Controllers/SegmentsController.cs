@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LTMS.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LTMS.Controllers
 {
@@ -21,24 +22,24 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Segments
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Segment>>> GetSegments()
+        [HttpGet("GetAllSegments")]
+        public async Task<ActionResult<IEnumerable<Segment>>> GetAllSegments()
         {
-          if (_context.Segments == null)
-          {
-              return NotFound();
-          }
+            if (_context.Segments == null)
+            {
+                return NotFound();
+            }
             return await _context.Segments.ToListAsync();
         }
 
         // GET: api/Segments/5
-        [HttpGet("{id}")]
+        [HttpGet("GetSegment")]
         public async Task<ActionResult<Segment>> GetSegment(int id)
         {
-          if (_context.Segments == null)
-          {
-              return NotFound();
-          }
+            if (_context.Segments == null)
+            {
+                return NotFound();
+            }
             var segment = await _context.Segments.FindAsync(id);
 
             if (segment == null)
@@ -51,10 +52,10 @@ namespace LTMS.Controllers
 
         // PUT: api/Segments/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutSegment(int id, Segment segment)
+        [HttpPut("Update"),Authorize(Roles =("Admin"))]
+        public async Task<IActionResult> PutSegment(int id, [FromBody] Segment segment)
         {
-            if (id != segment.Id)
+            if ( segment==null)
             {
                 return BadRequest();
             }
@@ -82,7 +83,7 @@ namespace LTMS.Controllers
 
         // POST: api/Segments
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost("PostSegment")]
         public async Task<ActionResult<Segment>> PostSegment(Segment segment)
         {
           if (_context.Segments == null)
@@ -96,13 +97,11 @@ namespace LTMS.Controllers
         }
 
         // DELETE: api/Segments/5
-        [HttpDelete("{id}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> DeleteSegment(int id)
         {
-            if (_context.Segments == null)
-            {
-                return NotFound();
-            }
+           
+           
             var segment = await _context.Segments.FindAsync(id);
             if (segment == null)
             {
@@ -119,5 +118,8 @@ namespace LTMS.Controllers
         {
             return (_context.Segments?.Any(e => e.Id == id)).GetValueOrDefault();
         }
+
+
+       
     }
 }

@@ -16,4 +16,6 @@ public partial class Segment
     public string ChefDeSegment { get; set; } = null!;
 
     public int Id { get; set; }
+
+    public virtual ICollection<Employe> Employes { get; } = new List<Employe>();
 }

@@ -21,8 +21,8 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Circuits
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Circuit>>> GetCircuits()
+        [HttpGet("GetAllCircuits")]
+        public async Task<ActionResult<IEnumerable<Circuit>>> GetAllCircuits()
         {
           if (_context.Circuits == null)
           {
@@ -32,7 +32,7 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Circuits/5
-        [HttpGet("{id}")]
+        [HttpGet("GetCircuit")]
         public async Task<ActionResult<Circuit>> GetCircuit(int id)
         {
           if (_context.Circuits == null)
@@ -51,7 +51,7 @@ namespace LTMS.Controllers
 
         // PUT: api/Circuits/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
+        [HttpPut("PutCircuit")]
         public async Task<IActionResult> PutCircuit(int id, Circuit circuit)
         {
             if (id != circuit.Id)
@@ -82,13 +82,22 @@ namespace LTMS.Controllers
 
         // POST: api/Circuits
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost("PostCircuit")]
         public async Task<ActionResult<Circuit>> PostCircuit(Circuit circuit)
         {
-          if (_context.Circuits == null)
-          {
-              return Problem("Entity set 'LtmsContext.Circuits'  is null.");
-          }
+            if (string.IsNullOrEmpty(circuit.Agence))
+            {
+                return BadRequest("circuit property is required.");
+            }
+
+
+            var agence = await _context.Agences.FirstOrDefaultAsync(a => a.Nom == circuit.Agence);
+            if (agence == null)
+            {
+                return BadRequest("circuit not found.");
+            }
+
+            circuit.AgenceNavigation = agence;
             _context.Circuits.Add(circuit);
             await _context.SaveChangesAsync();
 
@@ -96,7 +105,7 @@ namespace LTMS.Controllers
         }
 
         // DELETE: api/Circuits/5
-        [HttpDelete("{id}")]
+        [HttpDelete("DeleteCircuit")]
         public async Task<IActionResult> DeleteCircuit(int id)
         {
             if (_context.Circuits == null)
@@ -119,5 +128,7 @@ namespace LTMS.Controllers
         {
             return (_context.Circuits?.Any(e => e.Id == id)).GetValueOrDefault();
         }
+
+       
     }
 }

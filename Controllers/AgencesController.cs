@@ -21,8 +21,8 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Agences
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Agence>>> GetAgences()
+        [HttpGet("GetAllAgences")]
+        public async Task<ActionResult<IEnumerable<Agence>>> GetAllAgences()
         {
           if (_context.Agences == null)
           {
@@ -32,7 +32,7 @@ namespace LTMS.Controllers
         }
 
         // GET: api/Agences/5
-        [HttpGet("{id}")]
+        [HttpGet("GetAgence")]
         public async Task<ActionResult<Agence>> GetAgence(string id)
         {
           if (_context.Agences == null)
@@ -51,8 +51,8 @@ namespace LTMS.Controllers
 
         // PUT: api/Agences/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutAgence(string id, Agence agence)
+        [HttpPut("PutAgence")]
+        public async Task<ActionResult> PutAgence(string id, Agence agence)
         {
             if (id != agence.Nom)
             {
@@ -82,7 +82,7 @@ namespace LTMS.Controllers
 
         // POST: api/Agences
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost("PostAgence")]
         public async Task<ActionResult<Agence>> PostAgence(Agence agence)
         {
 
@@ -107,7 +107,7 @@ namespace LTMS.Controllers
         }
 
         // DELETE: api/Agences/5
-        [HttpDelete("{id}")]
+        [HttpDelete("DeleteAgence")]
         public async Task<IActionResult> DeleteAgence(string id)
         {
             if (_context.Agences == null)
@@ -130,5 +130,7 @@ namespace LTMS.Controllers
         {
             return (_context.Agences?.Any(e => e.Nom == id)).GetValueOrDefault();
         }
+
+     
     }
 }
